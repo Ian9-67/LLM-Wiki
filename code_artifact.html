@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微積分：看懂變化與累積的數學語言</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts：思源黑體 + Inter + 數學襯線字體 Lora -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Lora:ital,wght@0,600;1,500;1,700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 全域深色學術科技風格設定 */
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #090d16;
+            color: #f1f5f9;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 優雅的數學公式字體與分數排版 */
+        .math-font {
+            font-family: 'Lora', 'Times New Roman', serif;
+        }
+        .math-var {
+            font-family: 'Lora', 'Times New Roman', serif;
+            font-style: italic;
+        }
+        .fraction {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 0.25rem;
+            font-family: 'Lora', serif;
+        }
+        .fraction > span:first-child {
+            border-bottom: 1.5px solid currentColor;
+            padding: 0 0.3rem 0.1rem;
+            line-height: 1.1;
+        }
+        .fraction > span:last-child {
+            padding: 0.1rem 0.3rem 0;
+            line-height: 1.1;
+        }
+
+        /* 投影片切換轉場動畫 */
+        .slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(14px) scale(0.99);
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                        visibility 0.4s;
+            overflow-y: auto;
+            padding-bottom: 5.5rem;
+        }
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+            z-index: 10;
+        }
+
+        /* 自訂捲軸 */
+        .slide::-webkit-scrollbar { width: 6px; }
+        .slide::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
+        .slide::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.35); border-radius: 9999px; }
+
+        /* 座標系網格背景 */
+        .bg-math-grid {
+            background-image:
+                radial-gradient(circle at 18% 22%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 82% 78%, rgba(251, 191, 36, 0.07) 0%, transparent 45%),
+                linear-gradient(to right, rgba(30, 41, 59, 0.38) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.38) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+        }
+
+        /* 互動滑桿美化 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #1e293b;
+            height: 8px;
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 3px solid #0f172a;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* 總覽卡片懸停效果 */
+        .overview-card {
+            transition: all 0.25s ease;
+        }
+        .overview-card:hover {
+            transform: translateY(-4px);
+            border-color: #38bdf8;
+            box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-math-grid h-screen w-screen flex flex-col justify-between relative">
+
+    <!-- 頂部學術標題列 -->
+    <header class="w-full px-6 py-3 flex items-center justify-between border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md z-20 shrink-0">
+        <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse"></span>
+            <span class="text-xs sm:text-sm font-bold tracking-wider text-slate-300">LLM Wiki 教學簡報 • 微積分核心直覺</span>
+        </div>
+        <div class="hidden md:flex items-center gap-4 text-xs text-slate-400">
+            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200">←</kbd> <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200">→</kbd> 翻頁</span>
+            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200">Space</kbd> 下一頁</span>
+            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200">O</kbd> 總覽模式</span>
+        </div>
+    </header>
+
+    <!-- 主要投影片展示區 -->
+    <main id="slides-container" class="relative flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-5">
+
+        <!-- ==========================================
+             第 1 頁：封面頁
+        =========================================== -->
+        <section class="slide active flex flex-col items-center justify-center text-center px-4" data-title="1. 封面：微積分：看懂變化與累積的數學語言">
+            <!-- 裝飾性數學積分符號徽章 -->
+            <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-sky-950/80 border border-sky-500/40 text-sky-300 text-xs sm:text-sm font-semibold mb-6 shadow-lg">
+                <span class="math-font text-base text-amber-400 font-bold">∫ &amp; d/dx</span>
+                <span>零基礎友善入門 • 互動視覺化指南</span>
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-sky-200 to-sky-400 mb-5 leading-tight">
+                微積分：看懂變化與累積的數學語言
+            </h1>
+
+            <p class="text-base sm:text-xl md:text-2xl font-medium text-slate-300 max-w-3xl mb-9 leading-relaxed">
+                從<span class="text-sky-400 font-bold">極限</span>、<span class="text-amber-400 font-bold">微分</span>到<span class="text-emerald-400 font-bold">積分</span>的直覺視覺化指南
+            </p>
+
+            <!-- 三大核心模組預覽卡片 -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full mb-9 text-left">
+                <div class="bg-slate-900/85 border border-slate-800 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 math-font font-bold text-lg shrink-0">lim</div>
+                    <div>
+                        <div class="text-xs text-slate-400">基石工具</div>
+                        <div class="text-sm font-bold text-slate-100">極限：無限逼近的藝術</div>
+                    </div>
+                </div>
+                <div class="bg-slate-900/85 border border-slate-800 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 math-font font-bold text-lg shrink-0">dy/dx</div>
+                    <div>
+                        <div class="text-xs text-slate-400">微觀切分</div>
+                        <div class="text-sm font-bold text-slate-100">微分：捕捉瞬間變化率</div>
+                    </div>
+                </div>
+                <div class="bg-slate-900/85 border border-slate-800 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 math-font font-bold text-xl shrink-0">∫</div>
+                    <div>
+                        <div class="text-xs text-slate-400">宏觀加總</div>
+                        <div class="text-sm font-bold text-slate-100">積分：無窮微小的累積</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作與知識庫提示 -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl px-6 py-3.5 text-xs sm:text-sm text-slate-400 flex flex-col sm:flex-row items-center gap-2 sm:gap-6">
+                <span>📚 知識庫來源：<strong class="text-sky-300">微積分直覺教學 LLM Wiki（已收錄 5 篇文獻）</strong></span>
+                <span class="hidden sm:inline text-slate-700">|</span>
+                <span>⌨️ 按 <strong class="text-amber-400">方向鍵 ← →</strong> 或 <strong class="text-amber-400">空白鍵</strong> 開始探索</span>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             第 2 頁：為什麼需要微積分？
+        =========================================== -->
+        <section class="slide flex flex-col justify-center px-2 sm:px-6" data-title="2. 為什麼需要微積分？靜態 vs. 動態數學">
+            <div class="mb-5">
+                <span class="text-sky-400 font-bold text-xs sm:text-sm tracking-widest uppercase">01 / 學習動機</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">為什麼我們需要微積分？</h2>
+                <p class="text-slate-400 text-sm sm:text-base mt-1.5">國高中學的代數與幾何擅長處理「固定不變」的世界，但真實世界無時無刻都在「變化」與「彎曲」。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 左側：傳統靜態數學 -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-bold">傳統數學（Static Math）</span>
+                            <span class="text-2xl">📐</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-200 mb-4">處理「均勻、筆直、靜止」的問題</h3>
+
+                        <div class="space-y-4">
+                            <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
+                                <div class="text-xs font-bold text-slate-400 mb-1">🚗 速度問題：只能算「平均速度」</div>
+                                <p class="text-sm text-slate-300">開車 2 小時跑了 120 公里，平均時速是 60 km/h。但這無法告訴你<strong>「第 37 分鐘那一瞬間」</strong>儀表板指針指在哪裡。</p>
+                            </div>
+                            <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
+                                <div class="text-xs font-bold text-slate-400 mb-1">🟦 面積問題：只能算「規則多邊形」</div>
+                                <p class="text-sm text-slate-300">長方形面積 = 長 × 寬，三角形 = 底 × 高 ÷ 2。一旦遇到<strong>邊界不斷彎曲的湖泊或拋物線</strong>，傳統公式就束手無策。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 pt-3 border-t border-slate-800 text-xs text-slate-400">
+                        ⚠️ 痛點：面對「連續變化」與「曲線」時缺乏精準工具。
+                    </div>
+                </div>
+
+                <!-- 右側：微積分動態數學 -->
+                <div class="bg-gradient-to-b from-slate-900 to-sky-950/30 border-2 border-sky-500/40 rounded-3xl p-6 flex flex-col justify-between shadow-xl">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-bold">微積分（Calculus）</span>
+                            <span class="text-2xl">🚀</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-sky-300 mb-4">駕馭「瞬息萬變、彎曲累積」的世界</h3>
+
+                        <div class="space-y-4">
+                            <div class="bg-slate-950/80 p-4 rounded-2xl border border-amber-500/30">
+                                <div class="text-xs font-bold text-amber-400 mb-1">⚡ 微分（Differentiation）：把時間切到極短</div>
+                                <p class="text-sm text-slate-200">把時間間隔縮短到趨近於 0，算出<strong>「這一瞬間的瞬時速度」</strong>與曲線在某一點的傾斜程度（切線斜率）。</p>
+                            </div>
+                            <div class="bg-slate-950/80 p-4 rounded-2xl border border-emerald-500/30">
+                                <div class="text-xs font-bold text-emerald-400 mb-1">🧩 積分（Integration）：把圖形切到極細再相加</div>
+                                <p class="text-sm text-slate-200">把不規則曲線切成無數個極細長方形，全部加起來，就能精準算出<strong>任意曲線下方的面積</strong>與累積總量。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 pt-3 border-t border-sky-500/30 text-xs text-sky-200">
+                        ✨ 核心精神：<strong>「以直代曲、化整為零、積零為整」</strong>。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             第 3 頁：核心基石：極限（Limit）互動探索器
+        =========================================== -->
+        <section class="slide flex flex-col justify-center px-2 sm:px-6" data-title="3. 核心基石：極限（Limit）互動探索器">
+            <div class="mb-4">
+                <span class="text-sky-400 font-bold text-xs sm:text-sm tracking-widest uppercase">02 / 微積分的地基</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">極限（Limit）：無限逼近，但永遠不碰觸</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mt-1">
+                    想知道拋物線 <span class="math-var text-sky-300">f(x) = x²</span> 在 <span class="math-var text-white">x = 2</span> 這一點有多陡？我們先找附近一點 <span class="math-var text-amber-300">x = 2 + Δx</span> 連成「割線」，再讓距離 <span class="math-var text-amber-300">Δx</span> 無限縮小！
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+                <!-- 左側：SVG 動態幾何繪圖區 -->
+                <div class="lg:col-span-7 bg-slate-950/90 border border-slate-800 rounded-3xl p-4 shadow-xl">
+                    <svg id="limit-svg" viewBox="0 0 420 270" class="w-full h-auto rounded-2xl bg-slate-900/60">
+                        <!-- 座標網格與軸線 -->
+                        <defs>
+                            <pattern id="smallGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+                                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(51,65,85,0.35)" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="420" height="270" fill="url(#smallGrid)" />
+                        <!-- X 軸與 Y 軸 (原點設在 x=60, y=230; x每單位=95px, y每單位=22px) -->
+                        <line x1="20" y1="230" x2="400" y2="230" stroke="#64748b" stroke-width="1.5" />
+                        <line x1="60" y1="15" x2="60" y2="255" stroke="#64748b" stroke-width="1.5" />
+                        <text x="392" y="246" fill="#94a3b8" font-size="12" font-style="italic">x</text>
+                        <text x="45" y="25" fill="#94a3b8" font-size="12" font-style="italic">y</text>
+
+                        <!-- X 軸刻度 -->
+                        <text x="56" y="246" fill="#94a3b8" font-size="11">0</text>
+                        <line x1="155" y1="226" x2="155" y2="234" stroke="#64748b" stroke-width="1.5"/>
+                        <text x="151" y="246" fill="#94a3b8" font-size="11">1</text>
+                        <line x1="250" y1="226" x2="250" y2="234" stroke="#38bdf8" stroke-width="2"/>
+                        <text x="246" y="246" fill="#38bdf8" font-size="12" font-weight="bold">2</text>
+                        <line x1="345" y1="226" x2="345" y2="234" stroke="#64748b" stroke-width="1.5"/>
+                        <text x="341" y="246" fill="#94a3b8" font-size="11">3</text>
+
+                        <!-- 目標切線 (斜率=4, 通過 (2,4)) 虛線參考 -->
+                        <line id="limit-tangent-ref" x1="145" y1="230" x2="355" y2="54" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,5" opacity="0.75" />
+
+                        <!-- 拋物線 f(x) = x^2 曲線路徑 -->
+                        <path id="limit-curve" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+
+                        <!-- Δx 與 Δy 輔助直角三角形 -->
+                        <line id="limit-dx-line" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="3,3" />
+                        <line id="limit-dy-line" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="3,3" />
+
+                        <!-- 動態割線 (Secant Line) -->
+                        <line id="limit-secant-line" stroke="#f59e0b" stroke-width="2.5" />
+
+                        <!-- 固定點 P(2, 4) -->
+                        <circle cx="250" cy="142" r="5.5" fill="#38bdf8" stroke="#090d16" stroke-width="2" />
+                        <text x="210" y="132" fill="#e2e8f0" font-size="11" font-weight="bold">P(2, 4)</text>
+
+                        <!-- 移動點 Q(2+Δx, (2+Δx)^2) -->
+                        <circle id="limit-point-q" r="5.5" fill="#f59e0b" stroke="#090d16" stroke-width="2" />
+                        <text id="limit-label-q" fill="#fbbf24" font-size="11" font-weight="bold">Q</text>
+                    </svg>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mt-2.5 px-2 text-xs text-slate-400">
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-sky-400 inline-block"></span> 函數曲線 <span class="math-var">f(x)=x²</span></span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-amber-400 inline-block"></span> 動態割線（連接 P 與 Q）</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 border-t border-dashed border-emerald-400 inline-block"></span> 真實切線（斜率 = 4）</span>
+                    </div>
+                </div>
+
+                <!-- 右側：互動控制滑桿與即時數值面板 -->
+                <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="dx-slider" class="text-sm font-bold text-amber-300">拖動調整間隔 <span class="math-var text-base">Δx</span>：</label>
+                            <span id="dx-display" class="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-mono font-bold text-sm">Δx = 1.000</span>
+                        </div>
+                        <!-- 滑桿：值從 1000 降到 1，代表 Δx 從 1.000 逼近 0.001 -->
+                        <input id="dx-slider" type="range" min="1" max="1000" value="1000" class="w-full my-2" oninput="updateLimitSim(this.value)">
+                        <div class="flex justify-between text-[11px] text-slate-400">
+                            <span>← 越靠近 0 (<span class="math-var">Δx = 0.001</span>)</span>
+                            <span>距離較遠 (<span class="math-var">Δx = 1.0</span>) →</span>
+                        </div>
+                    </div>
+
+                    <!-- 即時公式與計算結果 -->
+                    <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+                        <div class="text-xs text-slate-400 font-semibold">割線斜率公式：</div>
+                        <div class="text-sm sm:text-base text-slate-200 flex items-center flex-wrap gap-1">
+                            <span>斜率 =</span>
+                            <div class="fraction">
+                                <span><span class="math-var">f</span>(2 + <span class="math-var">Δx</span>) − <span class="math-var">f</span>(2)</span>
+                                <span><span class="math-var">Δx</span></span>
+                            </div>
+                            <span>= 4 + <span class="math-var text-amber-300">Δx</span></span>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-400">目前割線斜率：</span>
+                            <span id="slope-display" class="text-xl font-mono font-extrabold text-amber-400">5.000</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-400">極限目標（切線斜率）：</span>
+                            <span class="text-base font-mono font-bold text-emerald-400">4.000</span>
+                        </div>
+                    </div>
+
+                    <div id="limit-insight" class="p-3 rounded-xl bg-sky-950/50 border border-sky-500/30 text-xs text-sky-200 leading-relaxed">
+                        💡 試著把滑桿<strong>往左拖動</strong>，讓 <span class="math-var">Δx</span> 越來越接近 0，觀察橘色割線如何與綠色切線重合！
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             第 4 頁：微分（Differentiation）
+        =========================================== -->
+        <section class="slide flex flex-col justify-center px-2 sm:px-6" data-title="4. 微分（Differentiation）：捕捉瞬間變化率">
+            <div class="mb-5">
+                <span class="text-amber-400 font-bold text-xs sm:text-sm tracking-widest uppercase">03 / 微觀切分</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">微分（Differentiation）：捕捉「這一瞬間」的變化率</h2>
+                <p class="text-slate-400 text-sm mt-1">當剛才的 <span class="math-var">Δx</span> 縮到極限（趨近於 0）時，割線斜率就正式成為<strong>「導數（Derivative）」</strong>！</p>
+            </div>
+
+            <!-- 核心公式橫幅 -->
+            <div class="bg-slate-900/95 border border-amber-500/40 rounded-3xl p-5 sm:p-6 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🔬</span>
+                    <div>
+                        <div class="text-xs font-bold text-amber-400 uppercase">導數的數學定義</div>
+                        <div class="text-sm text-slate-300">將微小變化量取極限，記作 <span class="math-var text-white font-bold">f'(x)</span> 或 <span class="math-var text-white font-bold">dy/dx</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 px-6 py-3 rounded-2xl border border-slate-800 text-lg sm:text-2xl text-white math-font flex items-center gap-2">
+                    <span class="math-var text-amber-300 font-bold">f'(x)</span>
+                    <span>=</span>
+                    <div class="inline-flex flex-col items-center text-sm sm:text-base leading-none mx-1">
+                        <span>lim</span>
+                        <span class="text-xs text-slate-400">Δx→0</span>
+                    </div>
+                    <div class="fraction text-base sm:text-lg">
+                        <span><span class="math-var">f</span>(<span class="math-var">x</span> + <span class="math-var">Δx</span>) − <span class="math-var">f</span>(<span class="math-var">x</span>)</span>
+                        <span><span class="math-var">Δx</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 三大理解視角卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <!-- 視角 1：符號解碼 -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5">
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center font-bold math-font text-lg mb-3">dy/dx</div>
+                    <h3 class="text-lg font-bold text-white mb-2">1. 看懂神秘符號</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed mb-3">
+                        萊布尼茲發明的符號 <span class="math-var text-sky-300 font-bold">dy / dx</span> 其實非常直白：
+                    </p>
+                    <ul class="text-xs text-slate-400 space-y-1.5 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                        <li>• <span class="math-var text-amber-300 font-bold">dx</span>：代表 <span class="math-var">x</span> 的極微小變化量</li>
+                        <li>• <span class="math-var text-sky-300 font-bold">dy</span>：代表隨之產生的 <span class="math-var">y</span> 極微小變化量</li>
+                        <li>• 兩者相除，就是<strong>「變化敏感度」</strong>！</li>
+                    </ul>
+                </div>
+
+                <!-- 視角 2：幾何意義 -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center text-xl mb-3">📈</div>
+                    <h3 class="text-lg font-bold text-white mb-2">2. 幾何意義：切線斜率</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed mb-3">
+                        想像你在雲霄飛車軌道上滑行，車頭手電筒照出去的直線方向就是<strong>「切線」</strong>：
+                    </p>
+                    <ul class="text-xs text-slate-400 space-y-1.5 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                        <li>• <span class="math-var text-emerald-400 font-bold">f'(x) &gt; 0</span>：正在爬坡（函數遞增）</li>
+                        <li>• <span class="math-var text-rose-400 font-bold">f'(x) &lt; 0</span>：正在下坡（函數遞減）</li>
+                        <li>• <span class="math-var text-amber-300 font-bold">f'(x) = 0</span>：到達山頂最高點或谷底最低點！</li>
+                    </ul>
+                </div>
+
+                <!-- 視角 3：生活與 AI 應用 -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xl mb-3">🏎️</div>
+                    <h3 class="text-lg font-bold text-white mb-2">3. 真實世界的應用</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed mb-3">
+                        只要牽涉到「變化率」與「尋找最佳極值」，背後全都是微分：
+                    </p>
+                    <ul class="text-xs text-slate-400 space-y-1.5 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                        <li>• <strong>汽車時速表</strong>：位置對時間微分 = 瞬時速度</li>
+                        <li>• <strong>商業利潤最大化</strong>：找到斜率為 0 的最高獲利點</li>
+                        <li>• <strong>AI 深度學習</strong>：梯度下降法靠微分尋找誤差最低點</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             第 5 頁：積分（Integration）互動黎曼和模擬器
+        =========================================== -->
+        <section class="slide flex flex-col justify-center px-2 sm:px-6" data-title="5. 積分（Integration）：黎曼和矩形切割器">
+            <div class="mb-4">
+                <span class="text-emerald-400 font-bold text-xs sm:text-sm tracking-widest uppercase">04 / 宏觀累積</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">積分（Integration）：把無數個「極小」累積起來</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mt-1">
+                    如何求曲線 <span class="math-var text-sky-300">f(x) = x²</span> 從 <span class="math-var">x = 0</span> 到 <span class="math-var">x = 3</span> 下方的面積？把它切成 <span class="math-var text-emerald-300">n</span> 個長方形加起來！
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+                <!-- 左側：SVG 黎曼和動態繪圖區 -->
+                <div class="lg:col-span-7 bg-slate-950/90 border border-slate-800 rounded-3xl p-4 shadow-xl">
+                    <svg id="riemann-svg" viewBox="0 0 420 270" class="w-full h-auto rounded-2xl bg-slate-900/60">
+                        <!-- 座標軸 (原點 x=50, y=235; x每單位=105px, y每單位=22px, 最大 y=9 在 y=37) -->
+                        <line x1="20" y1="235" x2="400" y2="235" stroke="#64748b" stroke-width="1.5" />
+                        <line x1="50" y1="15" x2="50" y2="255" stroke="#64748b" stroke-width="1.5" />
+                        <text x="392" y="250" fill="#94a3b8" font-size="12" font-style="italic">x</text>
+                        <text x="35" y="25" fill="#94a3b8" font-size="12" font-style="italic">y</text>
+
+                        <!-- X 軸刻度 0, 1, 2, 3 -->
+                        <text x="45" y="250" fill="#94a3b8" font-size="11">0</text>
+                        <line x1="155" y1="231" x2="155" y2="239" stroke="#64748b" stroke-width="1.5"/>
+                        <text x="151" y="250" fill="#94a3b8" font-size="11">1</text>
+                        <line x1="260" y1="231" x2="260" y2="239" stroke="#64748b" stroke-width="1.5"/>
+                        <text x="256" y="250" fill="#94a3b8" font-size="11">2</text>
+                        <line x1="365" y1="231" x2="365" y2="239" stroke="#10b981" stroke-width="2"/>
+                        <text x="361" y="250" fill="#10b981" font-size="12" font-weight="bold">3</text>
+
+                        <!-- 動態矩形群組容器 -->
+                        <g id="riemann-rects-group"></g>
+
+                        <!-- 拋物線曲線 f(x) = x^2 -->
+                        <path id="riemann-curve" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mt-2.5 px-2 text-xs text-slate-400">
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-emerald-500/40 border border-emerald-400 inline-block rounded-sm"></span> 黎曼矩形（中點法逼近）</span>
+                        <span>區間：<span class="math-var text-white">x ∈ [0, 3]</span></span>
+                    </div>
+                </div>
+
+                <!-- 右側：矩形數量控制滑桿與面積比較 -->
+                <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="rect-slider" class="text-sm font-bold text-emerald-300">調整切割矩形數量 <span class="math-var text-base">n</span>：</label>
+                            <span id="rect-count-display" class="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-mono font-bold text-sm">n = 4 塊</span>
+                        </div>
+                        <input id="rect-slider" type="range" min="4" max="100" value="4" class="w-full my-2" oninput="updateRiemannSim(this.value)">
+                        <div class="flex justify-between text-[11px] text-slate-400">
+                            <span>粗糙切割 (<span class="math-var">n = 4</span>)</span>
+                            <span>極細切割 (<span class="math-var">n = 100</span>) →</span>
+                        </div>
+                    </div>
+
+                    <!-- 定積分符號與面積數據 -->
+                    <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <span class="text-xs text-slate-400">定積分符號表達：</span>
+                            <span class="math-font text-lg text-sky-300 font-bold">∫₀³ x² dx</span>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-400">目前矩形總面積：</span>
+                            <span id="riemann-area-display" class="text-xl font-mono font-extrabold text-emerald-400">8.9531</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-400">真實精確面積：</span>
+                            <span class="text-base font-mono font-bold text-white">9.0000</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-400">誤差百分比：</span>
+                            <span id="riemann-error-display" class="text-xs font-mono font-bold text-amber-400">0.52%</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 leading-relaxed">
+                        💡 拉長長方形符號 <strong>∫</strong> 其實就是英文字母 <strong>S (Sum，總和)</strong> 的拉長版！當 <span class="math-var">n → ∞</span> 時，矩形階梯就會平滑貼合曲線。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             第 6 頁：微積分基本定理（FTC）
+        =========================================== -->
+        <section class="slide flex flex-col justify-center px-2 sm:px-6" data-title="6. 微積分基本定理：微分與積分是互逆運算">
+            <div class="mb-5">
+                <span class="text-sky-400 font-bold text-xs sm:text-sm tracking-widest uppercase">05 / 偉大的統一</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">微積分基本定理：原來微分與積分是互逆的！</h2>
+                <p class="text-slate-400 text-sm mt-1">牛頓與萊布尼茲發現了人類數學史上最美妙的橋樑：看似無關的「求切線」與「求面積」，其實就像<strong>加法與減法、乘法與除法</strong>一樣互為逆運算！</p>
+            </div>
+
+            <!-- 視覺化雙向循環橋樑 -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <div class="grid grid-cols-1 md:grid-cols-11 gap-4 items-center">
+                    
+                    <!-- 左側：總量 / 里程表 F(x) -->
+                    <div class="md:col-span-4 bg-slate-950 border-2 border-sky-500/50 rounded-3xl p-5 text-center">
+                        <div class="text-3xl mb-2">🛣️</div>
+                        <span class="px-2.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-xs font-bold">累積總量函數 <span class="math-var">F(x)</span></span>
+                        <h3 class="text-xl font-extrabold text-white mt-2">汽車「里程表」</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
+                            記錄從出發到現在<strong>總共跑了幾公里</strong>（對應曲線下的累積面積）。
+                        </p>
+                    </div>
+
+                    <!-- 中間：上下雙向逆運算箭頭 -->
+                    <div class="md:col-span-3 flex flex-col items-center justify-center gap-4 py-2">
+                        <!-- 上箭頭：微分 -->
+                        <div class="w-full bg-amber-950/40 border border-amber-500/40 rounded-2xl p-3 text-center">
+                            <div class="text-xs font-extrabold text-amber-400">微分（拆解變化率）</div>
+                            <div class="text-amber-300 font-black text-lg tracking-widest my-0.5">━━━━━▶</div>
+                            <div class="text-[11px] text-slate-300">看里程跳動有多快</div>
+                        </div>
+
+                        <!-- 下箭頭：積分 -->
+                        <div class="w-full bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-3 text-center">
+                            <div class="text-xs font-extrabold text-emerald-400">積分（累積總變化）</div>
+                            <div class="text-emerald-300 font-black text-lg tracking-widest my-0.5">◀━━━━━</div>
+                            <div class="text-[11px] text-slate-300">把每瞬間速度加總</div>
+                        </div>
+                    </div>
+
+                    <!-- 右側：變化率 / 速度表 f(x) -->
+                    <div class="md:col-span-4 bg-slate-950 border-2 border-amber-500/50 rounded-3xl p-5 text-center">
+                        <div class="text-3xl mb-2">⏱️</div>
+                        <span class="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-xs font-bold">瞬時變化率函數 <span class="math-var">f(x)</span></span>
+                        <h3 class="text-xl font-extrabold text-white mt-2">汽車「時速表」</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
+                            顯示當下這一秒<strong>開得有多快</strong>（對應位置函數的切線斜率）。
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- 定理白話總結框 -->
+                <div class="mt-6 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        <strong class="text-sky-300">💡 為什麼這件事這麼重要？</strong><br>
+                        因為我們不需要真的去切一億個長方形來算面積！只要找到「誰微分之後會變成 <span class="math-var">f(x)</span>」（反導函數 <span class="math-var">F(x)</span>），把頭尾相減就能瞬間算出精確積分！
+                    </div>
+                    <div class="bg-slate-950 px-5 py-3 rounded-2xl border border-slate-700 math-font text-base sm:text-lg text-amber-300 font-bold shrink-0">
+                        ∫ₐᵇ f(x) dx = F(b) − F(a)
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             第 7 頁：總結與知識架構圖
+        =========================================== -->
+        <section class="slide flex flex-col justify-center px-2 sm:px-6" data-title="7. 總結與知識架構圖">
+            <div class="mb-5">
+                <span class="text-amber-400 font-bold text-xs sm:text-sm tracking-widest uppercase">06 / 完整學習地圖</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">微積分核心知識架構圖與學習建議</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- 左側：階層式心智圖 -->
+                <div class="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
+                    <h3 class="text-base font-extrabold text-sky-300 mb-4">🗺️ 一張圖看懂微積分全貌</h3>
+                    
+                    <div class="space-y-3">
+                        <!-- 第一層：極限 -->
+                        <div class="bg-sky-950/50 border border-sky-500/40 rounded-2xl p-3.5 text-center">
+                            <div class="text-xs font-bold text-sky-400">LEVEL 1 • 共同地基</div>
+                            <div class="text-base font-extrabold text-white">極限（Limit）：處理「無窮小」與「無限逼近」的數學工具</div>
+                        </div>
+
+                        <div class="flex justify-center text-slate-500 font-bold text-sm">↙ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↘</div>
+
+                        <!-- 第二層：微分與積分 -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-3.5">
+                                <div class="text-xs font-bold text-amber-400">LEVEL 2A • 局部變化</div>
+                                <div class="text-sm font-extrabold text-white mt-0.5">微分（Derivative）</div>
+                                <div class="text-xs text-slate-300 mt-1">求切線斜率、瞬時速度、最大值與最小值</div>
+                            </div>
+                            <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-3.5">
+                                <div class="text-xs font-bold text-emerald-400">LEVEL 2B • 整體累積</div>
+                                <div class="text-sm font-extrabold text-white mt-0.5">積分（Integral）</div>
+                                <div class="text-xs text-slate-300 mt-1">黎曼和加總、求曲線下面積、累積總位移</div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-center text-slate-500 font-bold text-sm">↘ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↙</div>
+
+                        <!-- 第三層：微積分基本定理 -->
+                        <div class="bg-gradient-to-r from-sky-950/60 via-purple-950/50 to-amber-950/60 border border-purple-400/40 rounded-2xl p-3.5 text-center">
+                            <div class="text-xs font-bold text-purple-300">LEVEL 3 • 核心樞紐</div>
+                            <div class="text-base font-extrabold text-white">微積分基本定理（FTC）：連結微分與積分的互逆橋樑</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側：下一步學習建議與 Wiki 文獻 -->
+                <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-extrabold text-amber-300 mb-3">🚀 給初學者的下一步學習建議</h3>
+                        <ul class="space-y-2.5 text-xs sm:text-sm text-slate-300 mb-5">
+                            <li class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                                <strong class="text-white">1. 先建立幾何直覺再背公式：</strong>推薦觀看 3Blue1Brown《微積分的本質》系列動畫。
+                            </li>
+                            <li class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                                <strong class="text-white">2. 掌握基本函數導數：</strong>從多項式（<span class="math-var">xⁿ</span>）、指數（<span class="math-var">eˣ</span>）與三角函數開始練習。
+                            </li>
+                            <li class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                                <strong class="text-white">3. 認識連鎖律（Chain Rule）：</strong>理解「層層傳遞的變化率」，這是理解現代 AI 反向傳播算法的關鍵！
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+                        <strong class="text-slate-300 block mb-1">📚 本簡報 LLM Wiki 收錄文獻（5 篇）：</strong>
+                        1. 3Blue1Brown《Essence of Calculus》筆記<br>
+                        2. Gilbert Strang《Calculus》第一章直覺導論<br>
+                        3. Stewart《Calculus: Early Transcendentals》極限與導數<br>
+                        4. Steven Strogatz《Infinite Powers（無限的力量）》科普摘要<br>
+                        5. Khan Academy 微積分基礎互動教材結構分析
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==========================================
+         底部控制列：進度條、頁碼、總覽、上下頁
+    =========================================== -->
+    <footer class="w-full bg-slate-950/90 border-t border-slate-800 backdrop-blur-md z-30 shrink-0">
+        <div class="w-full h-1 bg-slate-800">
+            <div id="progress-bar" class="h-full bg-gradient-to-r from-sky-400 via-amber-400 to-emerald-400 transition-all duration-300" style="width: 14.28%;"></div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleOverview()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center gap-2 transition">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    <span>總覽模式</span>
+                </button>
+                <span id="page-indicator" class="text-xs sm:text-sm font-mono font-bold text-slate-300 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+                    1 / 7
+                </span>
+            </div>
+
+            <div id="current-slide-title" class="hidden md:block text-xs font-medium text-slate-400 truncate max-w-sm">
+                1. 封面：微積分：看懂變化與累積的數學語言
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <button id="prev-btn" onclick="prevSlide()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-bold transition">
+                    ← 上一頁
+                </button>
+                <button id="next-btn" onclick="nextSlide()" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 text-xs sm:text-sm font-extrabold transition shadow-lg shadow-sky-500/20">
+                    下一頁 →
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==========================================
+         投影片總覽模式 Modal
+    =========================================== -->
+    <div id="overview-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-xl z-50 hidden flex-col p-6 sm:p-10 overflow-y-auto">
+        <div class="max-w-5xl mx-auto w-full">
+            <div class="flex items-center justify-between pb-6 border-b border-slate-800">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-white">投影片總覽（Slide Overview）</h2>
+                    <p class="text-sm text-slate-400 mt-1">點擊任意一張投影片卡片即可快速跳轉</p>
+                </div>
+                <button onclick="toggleOverview()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700">
+                    ✕ 關閉總覽 (Esc)
+                </button>
+            </div>
+            <div id="overview-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8"></div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         JavaScript 互動與數學動態繪圖邏輯
+    =========================================== -->
+    <script>
+        // 1. 投影片導覽控制
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        let currentSlideIndex = 0;
+
+        const progressBar = document.getElementById('progress-bar');
+        const pageIndicator = document.getElementById('page-indicator');
+        const currentSlideTitle = document.getElementById('current-slide-title');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const overviewModal = document.getElementById('overview-modal');
+        const overviewGrid = document.getElementById('overview-grid');
+
+        function updateSlideUI() {
+            slides.forEach((slide, index) => {
+                if (index === currentSlideIndex) {
+                    slide.classList.add('active');
+                    slide.scrollTop = 0;
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+
+            const currentNum = currentSlideIndex + 1;
+            pageIndicator.textContent = `${currentNum} / ${totalSlides}`;
+            progressBar.style.width = `${(currentNum / totalSlides) * 100}%`;
+            currentSlideTitle.textContent = slides[currentSlideIndex].getAttribute('data-title');
+
+            prevBtn.disabled = currentSlideIndex === 0;
+            nextBtn.disabled = currentSlideIndex === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlideIndex < totalSlides - 1) {
+                currentSlideIndex++;
+                updateSlideUI();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                updateSlideUI();
+            }
+        }
+
+        function goToSlide(index) {
+            if (index >= 0 && index < totalSlides) {
+                currentSlideIndex = index;
+                updateSlideUI();
+                if (!overviewModal.classList.contains('hidden')) {
+                    toggleOverview();
+                }
+            }
+        }
+
+        // 2. 總覽模式卡片生成
+        const slideSummaries = [
+            { badge: '封面', desc: '微積分核心主題介紹：從極限、微分到積分的直覺視覺化指南。' },
+            { badge: '學習動機', desc: '對比傳統靜態數學（平均速度、規則幾何）與微積分動態數學。' },
+            { badge: '極限互動', desc: '拖動滑桿讓 Δx 逼近 0，即時觀察割線如何變成切線。' },
+            { badge: '微分概念', desc: '導數 f\'(x) 與 dy/dx 的幾何意義、切線斜率與生活應用。' },
+            { badge: '積分互動', desc: '調整黎曼和矩形切割數量 n，觀察如何逼近曲線下真實面積。' },
+            { badge: '基本定理', desc: '用汽車里程表與時速表比喻，理解微分與積分的互逆關係。' },
+            { badge: '知識架構', desc: '完整微積分心智圖、初學者下一步建議與 LLM Wiki 參考文獻。' }
+        ];
+
+        function buildOverviewGrid() {
+            overviewGrid.innerHTML = '';
+            slides.forEach((slide, idx) => {
+                const title = slide.getAttribute('data-title');
+                const info = slideSummaries[idx] || { badge: `Slide ${idx + 1}`, desc: '' };
+                const isCurrent = idx === currentSlideIndex;
+
+                const card = document.createElement('div');
+                card.className = `overview-card cursor-pointer rounded-2xl p-5 border ${
+                    isCurrent ? 'bg-sky-950/50 border-sky-400 shadow-lg' : 'bg-slate-900 border-slate-800'
+                }`;
+                card.onclick = () => goToSlide(idx);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                            isCurrent ? 'bg-sky-400 text-slate-950' : 'bg-slate-800 text-sky-300'
+                        }">${info.badge}</span>
+                        <span class="text-xs font-mono text-slate-400">0${idx + 1}</span>
+                    </div>
+                    <h3 class="text-base font-bold text-white mb-2">${title}</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">${info.desc}</p>
+                `;
+                overviewGrid.appendChild(card);
+            });
+        }
+
+        function toggleOverview() {
+            const isHidden = overviewModal.classList.contains('hidden');
+            if (isHidden) {
+                buildOverviewGrid();
+                overviewModal.classList.remove('hidden');
+                overviewModal.classList.add('flex');
+            } else {
+                overviewModal.classList.add('hidden');
+                overviewModal.classList.remove('flex');
+            }
+        }
+
+        // 3. 第 3 頁：極限互動探索器 (SVG 繪圖與計算)
+        // 座標轉換：原點 (60, 230), x 比例 = 95px/單位, y 比例 = 22px/單位
+        function initLimitCurve() {
+            const path = document.getElementById('limit-curve');
+            let d = '';
+            for (let x = 0; x <= 3.15; x += 0.05) {
+                const px = 60 + x * 95;
+                const py = 230 - (x * x) * 22;
+                d += (x === 0 ? `M ${px} ${py}` : ` L ${px} ${py}`);
+            }
+            path.setAttribute('d', d);
+        }
+
+        function updateLimitSim(sliderVal) {
+            // sliderVal 範圍 1 ~ 1000，對應 dx = 0.001 ~ 1.000
+            const dx = parseInt(sliderVal, 10) / 1000;
+            const x1 = 2;
+            const y1 = 4;
+            const x2 = x1 + dx;
+            const y2 = x2 * x2;
+            const slope = (y2 - y1) / dx; // 即 4 + dx
+
+            // 更新數值文字
+            document.getElementById('dx-display').textContent = `Δx = ${dx.toFixed(3)}`;
+            document.getElementById('slope-display').textContent = slope.toFixed(3);
+
+            // 更新提示文字
+            const insight = document.getElementById('limit-insight');
+            if (dx <= 0.02) {
+                insight.innerHTML = `🎉 <strong>極限達成！</strong>當 <span class="math-var">Δx = ${dx.toFixed(3)}</span> 時，割線幾乎與切線完全重合，斜率無限逼近 <strong>4</strong>！`;
+            } else {
+                insight.innerHTML = `💡 目前兩點水平距離 <span class="math-var">Δx = ${dx.toFixed(3)}</span>，繼續往左拖動讓距離趨近於 0！`;
+            }
+
+            // 計算 SVG 座標
+            const px1 = 60 + x1 * 95; // 250
+            const py1 = 230 - y1 * 22; // 142
+            const px2 = 60 + x2 * 95;
+            const py2 = 230 - y2 * 22;
+
+            // 更新 Q 點與標籤
+            const pointQ = document.getElementById('limit-point-q');
+            const labelQ = document.getElementById('limit-label-q');
+            pointQ.setAttribute('cx', px2);
+            pointQ.setAttribute('cy', py2);
+            labelQ.setAttribute('x', px2 + 8);
+            labelQ.setAttribute('y', py2 - 4);
+            labelQ.textContent = dx < 0.08 ? '' : `Q(${x2.toFixed(2)}, ${y2.toFixed(2)})`;
+
+            // 更新 Δx 與 Δy 輔助線
+            const dxLine = document.getElementById('limit-dx-line');
+            const dyLine = document.getElementById('limit-dy-line');
+            dxLine.setAttribute('x1', px1);
+            dxLine.setAttribute('y1', py1);
+            dxLine.setAttribute('x2', px2);
+            dxLine.setAttribute('y2', py1);
+
+            dyLine.setAttribute('x1', px2);
+            dyLine.setAttribute('y1', py1);
+            dyLine.setAttribute('x2', px2);
+            dyLine.setAttribute('y2', py2);
+
+            // 延伸割線兩端 (從 x = 0.8 到 x = 3.2)
+            const xStart = 0.9;
+            const yStart = y1 + slope * (xStart - x1);
+            const xEnd = 3.15;
+            const yEnd = y1 + slope * (xEnd - x1);
+
+            const secantLine = document.getElementById('limit-secant-line');
+            secantLine.setAttribute('x1', 60 + xStart * 95);
+            secantLine.setAttribute('y1', 230 - yStart * 22);
+            secantLine.setAttribute('x2', 60 + xEnd * 95);
+            secantLine.setAttribute('y2', 230 - yEnd * 22);
+        }
+
+        // 4. 第 5 頁：黎曼和積分模擬器 (SVG 繪圖與計算)
+        // 座標轉換：原點 (50, 235), x 比例 = 105px/單位 (0~3 共 315px), y 比例 = 22px/單位 (0~9 共 198px)
+        function initRiemannCurve() {
+            const path = document.getElementById('riemann-curve');
+            let d = '';
+            for (let x = 0; x <= 3.05; x += 0.05) {
+                const px = 50 + x * 105;
+                const py = 235 - (x * x) * 22;
+                d += (x === 0 ? `M ${px} ${py}` : ` L ${px} ${py}`);
+            }
+            path.setAttribute('d', d);
+        }
+
+        function updateRiemannSim(nVal) {
+            const n = parseInt(nVal, 10);
+            const a = 0;
+            const b = 3;
+            const width = (b - a) / n;
+            const rectsGroup = document.getElementById('riemann-rects-group');
+            rectsGroup.innerHTML = '';
+
+            let totalArea = 0;
+            const pxWidth = width * 105;
+
+            for (let i = 0; i < n; i++) {
+                const xLeft = a + i * width;
+                const xMid = xLeft + width / 2;
+                const height = xMid * xMid; // 中點黎曼和
+                totalArea += height * width;
+
+                const pxX = 50 + xLeft * 105;
+                const pxHeight = height * 22;
+                const pxY = 235 - pxHeight;
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', pxX);
+                rect.setAttribute('y', pxY);
+                rect.setAttribute('width', Math.max(pxWidth - (n > 40 ? 0.2 : 0.8), 0.5));
+                rect.setAttribute('height', pxHeight);
+                rect.setAttribute('fill', 'rgba(16, 185, 129, 0.32)');
+                rect.setAttribute('stroke', n > 50 ? 'rgba(52, 211, 153, 0.45)' : '#34d399');
+                rect.setAttribute('stroke-width', n > 50 ? '0.5' : '1');
+                rectsGroup.appendChild(rect);
+            }
+
+            const exactArea = 9.0; // ∫_0^3 x^2 dx = 27 / 3 = 9
+            const errorPercent = (Math.abs(exactArea - totalArea) / exactArea) * 100;
+
+            document.getElementById('rect-count-display').textContent = `n = ${n} 塊`;
+            document.getElementById('riemann-area-display').textContent = totalArea.toFixed(4);
+            document.getElementById('riemann-error-display').textContent = `${errorPercent.toFixed(3)}%`;
+        }
+
+        // 5. 鍵盤快捷鍵監聽
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !overviewModal.classList.contains('hidden')) {
+                toggleOverview();
+                return;
+            }
+            if (e.key === 'o' || e.key === 'O') {
+                toggleOverview();
+                return;
+            }
+            if (!overviewModal.classList.contains('hidden')) return;
+
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                if (document.activeElement.tagName === 'BUTTON' || document.activeElement.tagName === 'INPUT') return;
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                if (document.activeElement.tagName === 'INPUT') return;
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+
+        // 頁面載入初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            updateSlideUI();
+            initLimitCurve();
+            updateLimitSim(1000);
+            initRiemannCurve();
+            updateRiemannSim(4);
+        });
+    </script>
+</body>
+</html>
